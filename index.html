@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Penlay - Draw on your Windows screen</title>
+<meta name="description" content="Penlay is a free Windows tool that puts a pen, highlighter, laser pointer, shapes and text on top of every app. Made by Suvashish Halder.">
+<meta property="og:title" content="Penlay - Draw on your Windows screen">
+<meta property="og:description" content="A free pen, highlighter and laser pointer that works on top of every app on Windows.">
+<meta property="og:image" content="https://suvashishfx.github.io/penlay/screenshot.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230A84FF'/%3E%3Cstop offset='1' stop-color='%23BF5AF2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='1' y='1' width='30' height='30' rx='8' fill='url(%23g)'/%3E%3Cpath d='M8.6 24.4L9.8 19.6L21.2 8.2L24.8 11.8L13.4 23.2Z M18.8 10.6L22.4 14.2' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --screen: #EDF0F5;
+    --surface: #FFFFFF;
+    --ink: #15171D;
+    --muted: #586071;
+    --line: #D3D9E3;
+    --bar: #1E1E22;
+    --bar-fg: #ECECF0;
+    --accent: #0A84FF;
+    --accent-dark: #0066D6;
+    --marker: #FF4678;
+    --red: #FF3B30;
+    --hi: #FFD60A;
+
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+    --hand: "Caveat", "Segoe Print", cursive;
+
+    --gutter: clamp(20px, 5vw, 64px);
+    --bar-space: 96px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink);
+    background-color: var(--screen);
+    background-image: radial-gradient(rgba(21, 23, 29, 0.09) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-dark); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+  img { max-width: 100%; height: auto; display: block; -webkit-user-drag: none; user-select: none; }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-left: calc(var(--gutter) + var(--bar-space));
+    padding-right: var(--gutter);
+  }
+
+  /* ------------------------------------------------ hero */
+  .hero {
+    position: relative;
+    padding-top: clamp(56px, 10vh, 120px);
+    padding-bottom: 72px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    margin-bottom: clamp(40px, 7vh, 72px);
+  }
+  .brand svg { width: 34px; height: 34px; }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(46px, 8.2vw, 104px);
+    line-height: 0.96;
+    letter-spacing: -0.035em;
+    margin: 0 0 28px;
+    max-width: 12ch;
+  }
+  .hl {
+    background-image: linear-gradient(transparent 58%, rgba(255, 214, 10, 0.75) 58%, rgba(255, 214, 10, 0.75) 92%, transparent 92%);
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    animation: swipe 0.7s 0.25s cubic-bezier(.3,.7,.2,1) forwards;
+  }
+  @keyframes swipe { to { background-size: 100% 100%; } }
+
+  .lede {
+    font-size: clamp(18px, 1.6vw, 21px);
+    color: var(--muted);
+    max-width: 34em;
+    margin: 0 0 40px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px 28px;
+  }
+  .circled { position: relative; display: inline-block; }
+  .circled svg.ring {
+    position: absolute;
+    left: -24px;
+    top: -18px;
+    width: calc(100% + 48px);
+    height: calc(100% + 36px);
+    pointer-events: none;
+    overflow: visible;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font: 600 17px/1 var(--body);
+    padding: 17px 26px;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: background-color .15s, transform .15s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-quiet { color: var(--ink); padding-left: 4px; padding-right: 4px; text-underline-offset: 4px; text-decoration: underline; text-decoration-color: var(--line); }
+  .btn-quiet:hover { text-decoration-color: var(--ink); }
+  .fine { font-size: 14px; color: var(--muted); margin: 22px 0 0; }
+
+  .note {
+    position: absolute;
+    left: 86px;
+    top: calc(50vh - 260px);
+    width: 200px;
+    pointer-events: none;
+  }
+  .note svg { display: block; width: 80px; height: 74px; margin: 6px 0 0 -6px; overflow: visible; }
+  .note p {
+    margin: 0;
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: 27px;
+    line-height: 1;
+    color: var(--marker);
+    transform: rotate(-4deg);
+    opacity: 0;
+    animation: appear .4s 1.5s forwards;
+  }
+
+  .draw-path {
+    stroke-dasharray: var(--len);
+    stroke-dashoffset: var(--len);
+    animation: ink var(--dur, .7s) var(--delay, 0s) cubic-bezier(.45,.1,.25,1) forwards;
+  }
+  @keyframes ink { to { stroke-dashoffset: 0; } }
+  @keyframes appear { to { opacity: 1; } }
+
+  /* ------------------------------------------------ sections */
+  section { padding: 72px 0; }
+  h2 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(32px, 4.2vw, 52px);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    margin: 0 0 18px;
+    max-width: 18ch;
+  }
+  .section-lede { color: var(--muted); max-width: 36em; margin: 0 0 44px; }
+
+  .shot figure { margin: 0; }
+  .shot img {
+    width: 100%;
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -28px rgba(21, 23, 29, 0.45), 0 0 0 1px rgba(21, 23, 29, 0.06);
+  }
+  .shot figcaption { color: var(--muted); font-size: 15px; margin-top: 16px; max-width: 44em; }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 56px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1.5px solid var(--ink);
+  }
+  .features li {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 18px;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .features .ico {
+    width: 44px; height: 44px;
+    border-radius: 11px;
+    background: var(--bar);
+    color: var(--bar-fg);
+    display: grid;
+    place-items: center;
+  }
+  .features .ico svg { width: 22px; height: 22px; }
+  .features h3 { font: 600 18px/1.3 var(--body); margin: 2px 0 4px; }
+  .features p { margin: 0; color: var(--muted); font-size: 16px; }
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 40px 56px;
+  }
+  .keys h3 { font: 600 18px/1.3 var(--body); margin: 0 0 6px; }
+  .keys .scope { color: var(--muted); font-size: 15px; margin: 0 0 16px; }
+  .keys table { width: 100%; border-collapse: collapse; }
+  .keys td { padding: 10px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .keys td:first-child { width: 52%; white-space: nowrap; }
+  kbd {
+    display: inline-block;
+    min-width: 30px;
+    padding: 4px 9px;
+    font: 600 14px/1.2 var(--body);
+    text-align: center;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-bottom-width: 3px;
+    border-radius: 7px;
+  }
+  .plus { color: var(--muted); margin: 0 3px; font-size: 13px; }
+
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    margin: 0 0 32px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .steps li {
+    counter-increment: step;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 26px 24px 28px;
+    border: 1px solid var(--line);
+  }
+  .steps li::before {
+    content: counter(step);
+    display: grid;
+    place-items: center;
+    width: 38px; height: 38px;
+    margin-bottom: 18px;
+    border-radius: 50%;
+    border: 2.5px solid var(--accent);
+    font: 800 18px/1 var(--display);
+    color: var(--accent);
+  }
+  .steps h3 { font: 600 18px/1.3 var(--body); margin: 0 0 6px; }
+  .steps p { margin: 0; color: var(--muted); font-size: 16px; }
+
+  .warning {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 14px;
+    max-width: 46em;
+    padding: 18px 22px;
+    border-left: 4px solid var(--hi);
+    background: rgba(255, 214, 10, 0.14);
+    border-radius: 0 12px 12px 0;
+    font-size: 16px;
+  }
+  .warning svg { width: 24px; height: 24px; margin-top: 1px; color: #8a6d00; }
+  .warning p { margin: 0; }
+
+  .faq { max-width: 46em; border-top: 1.5px solid var(--ink); }
+  .faq details { border-bottom: 1px solid var(--line); }
+  .faq summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 20px 40px 20px 0;
+    font: 600 18px/1.4 var(--body);
+    position: relative;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: "";
+    position: absolute;
+    right: 6px; top: 50%;
+    width: 11px; height: 11px;
+    border-right: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform .2s;
+  }
+  .faq details[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
+  .faq details p { margin: 0 0 22px; color: var(--muted); }
+
+  .final {
+    text-align: left;
+    padding: 96px 0 80px;
+  }
+  .final h2 { max-width: 14ch; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 28px 0 40px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 28px; }
+  footer nav { display: flex; gap: 22px; flex-wrap: wrap; }
+  footer a { color: var(--ink); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ------------------------------------------------ live drawing layer */
+  #ink {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 40;
+    pointer-events: none;
+    touch-action: none;
+  }
+  body.drawing #ink { pointer-events: auto; cursor: crosshair; }
+
+  .toolbar {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    width: 48px;
+    padding: 4px;
+    background: var(--bar);
+    border-radius: 12px;
+    box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--bar-fg);
+  }
+  .toolbar button {
+    all: unset;
+    box-sizing: border-box;
+    position: relative;
+    width: 40px; height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    cursor: pointer;
+    color: var(--bar-fg);
+  }
+  .toolbar button svg { width: 20px; height: 20px; }
+  .toolbar button:hover { background: rgba(255, 255, 255, 0.13); }
+  .toolbar button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .toolbar button:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+  .toolbar .logo svg { width: 30px; height: 30px; }
+  .toolbar hr { border: 0; height: 1px; background: rgba(255, 255, 255, 0.16); margin: 3px 8px; }
+  .toolbar .swatches {
+    display: grid;
+    grid-template-columns: repeat(2, 17px);
+    gap: 2px;
+    padding: 2px 3px;
+  }
+  .toolbar .swatches button {
+    width: 17px; height: 17px;
+    border-radius: 4px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  }
+  .toolbar .swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bar), 0 0 0 3.5px var(--bar-fg); background: inherit; }
+  .toolbar.collapsed > :not(.logo) { display: none; }
+
+  .tip {
+    position: absolute;
+    left: 56px;
+    white-space: nowrap;
+    background: var(--bar);
+    color: var(--bar-fg);
+    font: 500 13px/1 var(--body);
+    padding: 8px 10px;
+    border-radius: 7px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity .12s, transform .12s;
+  }
+  .toolbar button:hover .tip, .toolbar button:focus-visible .tip { opacity: 1; transform: none; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    z-index: 60;
+    transform: translate(-50%, 20px);
+    opacity: 0;
+    background: var(--bar);
+    color: var(--bar-fg);
+    font: 500 15px/1.3 var(--body);
+    padding: 12px 18px;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px -10px rgba(0,0,0,.5);
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast kbd { background: #33343a; color: #fff; border-color: #4a4b52; padding: 2px 7px; font-size: 13px; }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+  /* ------------------------------------------------ responsive */
+  @media (max-width: 860px) {
+    .features, .keys { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 1259px) {
+    .note { display: none; }
+  }
+  @media (max-width: 760px) {
+    :root { --bar-space: 0px; }
+    body { padding-bottom: 76px; }
+    .toolbar {
+      top: auto; bottom: 12px; left: 50%;
+      transform: translateX(-50%);
+      width: auto; max-width: calc(100vw - 24px);
+      flex-direction: row;
+      overflow-x: auto;
+    }
+    .toolbar hr { width: 1px; height: auto; margin: 8px 3px; }
+    .toolbar button { flex: 0 0 40px; }
+    .toolbar .swatches { flex: 0 0 auto; }
+    .tip { display: none; }
+    .toast { bottom: 84px; }
+    .keys td:first-child { white-space: normal; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .hl { animation: none; background-size: 100% 100%; }
+    .draw-path { animation: none; stroke-dashoffset: 0; }
+    .note p { animation: none; opacity: 1; }
+    .btn, .tip, .toast { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="ink" aria-hidden="true"></canvas>
+
+<!-- A working Penlay toolbar: draw anywhere on this page -->
+<div class="toolbar" id="toolbar" role="toolbar" aria-label="Try Penlay on this page">
+  <button class="logo" data-action="collapse" aria-label="Collapse toolbar">
+    <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <circle cx="20" cy="20" r="15.5" stroke="#0A84FF" stroke-width="2.5"/>
+      <path d="M13 27L14 23L23.5 13.5L26.5 16.5L17 26Z M21.5 15.5L24.5 18.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="tip">Collapse toolbar</span>
+  </button>
+  <hr>
+  <button data-tool="mouse" aria-pressed="true" aria-label="Mouse (Esc)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2V16.5L8.6 13.2L11.2 18.5L13.4 17.5L10.9 12.3H15.5Z"/></svg>
+    <span class="tip">Mouse (Esc)</span>
+  </button>
+  <button data-tool="pen" aria-pressed="false" aria-label="Pen (P)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17L4 13L13.5 3.5L16.5 6.5L7 16Z M11.5 5.5L14.5 8.5"/></svg>
+    <span class="tip">Pen (P)</span>
+  </button>
+  <button data-tool="highlighter" aria-pressed="false" aria-label="Highlighter (H)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17.5H17" stroke="#FFD60A" stroke-width="4" opacity=".8"/><path d="M6 12L12 2.5L16 5L10 14.5Z M6 12L5.5 14.5L8 14.8L10 14.5"/></svg>
+    <span class="tip">Highlighter (H)</span>
+  </button>
+  <button data-tool="laser" aria-pressed="false" aria-label="Laser pointer (L)">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="#FF3B30" opacity=".35"/><circle cx="10" cy="10" r="4" fill="#FF3B30"/><circle cx="10" cy="10" r="1.7" fill="#fff"/></svg>
+    <span class="tip">Laser pointer (L)</span>
+  </button>
+  <button data-tool="eraser" aria-pressed="false" aria-label="Eraser (E)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12.5L10 5L16.5 11.5L10.5 17.5H7.5Z M6.2 8.8L12.8 15.4 M10.5 17.5H18"/></svg>
+    <span class="tip">Eraser (E)</span>
+  </button>
+  <hr>
+  <button data-action="undo" aria-label="Undo (Ctrl+Z)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8H13A4 4 0 0 1 13 16H7 M4 8L7.5 4.5 M4 8L7.5 11.5"/></svg>
+    <span class="tip">Undo (Ctrl+Z)</span>
+  </button>
+  <button data-action="clear" aria-label="Clear all (Delete)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5H17 M7.5 5.5V3H12.5V5.5 M5 5.5L6 17.5H14L15 5.5 M8.5 9L8.8 14.5 M11.5 9L11.2 14.5"/></svg>
+    <span class="tip">Clear all (Delete)</span>
+  </button>
+  <hr>
+  <div class="swatches" role="group" aria-label="Colour">
+    <button data-color="#FF3B30" style="background:#FF3B30" aria-pressed="true" aria-label="Red (1)"></button>
+    <button data-color="#0A84FF" style="background:#0A84FF" aria-pressed="false" aria-label="Blue (2)"></button>
+    <button data-color="#34C759" style="background:#34C759" aria-pressed="false" aria-label="Green (3)"></button>
+    <button data-color="#15171D" style="background:#15171D" aria-pressed="false" aria-label="Black (4)"></button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#BF5AF2"/></linearGradient></defs>
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#bg)"/>
+        <path d="M8.6 24.4L9.8 19.6L21.2 8.2L24.8 11.8L13.4 23.2Z M18.8 10.6L22.4 14.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Penlay
+    </div>
+
+    <div class="note" aria-hidden="true">
+      <p>pick a pen and draw anywhere on this page</p>
+      <svg viewBox="0 0 80 74" fill="none">
+        <path class="draw-path" style="--len: 120; --delay: 1.6s; --dur: .45s" d="M56 4C58 34 40 58 8 66" stroke="#FF4678" stroke-width="3.5" stroke-linecap="round"/>
+        <path class="draw-path" style="--len: 40; --delay: 2s; --dur: .2s" d="M20 56L7 66L22 72" stroke="#FF4678" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <h1><span class="hl">Draw on your screen.</span> Then get back to work.</h1>
+    <p class="lede">Penlay puts a pen, highlighter and laser pointer on top of every app on Windows. Mark up a chart, explain a slide or point at a bug, then press Esc and carry on.</p>
+
+    <div class="actions">
+      <span class="circled">
+        <a class="btn btn-primary" href="https://github.com/suvashishfx/penlay/releases/latest/download/Penlay.zip">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3V13 M5.5 8.5L10 13L14.5 8.5 M4 17H16"/></svg>
+          Download for Windows
+        </a>
+        <svg class="ring" viewBox="0 0 320 90" preserveAspectRatio="none" aria-hidden="true">
+          <path class="draw-path" style="--len: 900; --delay: .75s; --dur: .7s" d="M196 7C100 0 12 14 10 44C8 76 110 88 214 85C292 82 316 62 310 40C304 16 250 4 150 10" stroke="#FF3B30" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <a class="btn btn-quiet" href="https://github.com/suvashishfx/penlay">View on GitHub</a>
+    </div>
+    <p class="fine">Free for Windows 10 and 11. Version 1.3, about 50 KB, nothing to install.</p>
+  </div>
+</header>
+
+<main>
+  <section class="shot" aria-label="Screenshot">
+    <div class="wrap">
+      <figure>
+        <img src="screenshot.png" width="2000" height="1600" alt="Penlay toolbars in dark and light themes, vertical and horizontal, with a highlight, an arrow, a circle and a laser trail drawn on screen">
+        <figcaption>Dark or light, vertical or horizontal. Buttons with a pink dot open more tools when you hover over them.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Everything you need to point things out</h2>
+      <p class="section-lede">Built for live trading sessions, lessons, screen recordings and calls, where you need to show exactly what you mean.</p>
+      <ul class="features">
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L4 13L13.5 3.5L16.5 6.5L7 16Z M11.5 5.5L14.5 8.5"/></svg></span>
+          <div><h3>Pen and highlighter</h3><p>Smooth strokes, and a see-through marker that never hides what's underneath.</p></div>
+        </li>
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="#FF3B30" opacity=".35"/><circle cx="10" cy="10" r="4" fill="#FF3B30"/><circle cx="10" cy="10" r="1.7" fill="#fff"/></svg></span>
+          <div><h3>Laser pointer</h3><p>A glowing trail that fades on its own, so there's nothing to clean up afterwards.</p></div>
+        </li>
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L16 4 M16 4H9.5 M16 4V10.5"/></svg></span>
+          <div><h3>Lines, arrows and shapes</h3><p>Hold Shift for straight lines, perfect squares and perfect circles.</p></div>
+        </li>
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5V4H16V6.5 M10 4V17 M7.5 17H12.5"/></svg></span>
+          <div><h3>Text</h3><p>Click anywhere and type. Shift+Enter for a new line, Ctrl+V to paste.</p></div>
+        </li>
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2V16.5L8.6 13.2L11.2 18.5L13.4 17.5L10.9 12.3H15.5Z"/></svg></span>
+          <div><h3>Click-through mode</h3><p>Press Esc and your drawings stay on screen while you keep using your apps.</p></div>
+        </li>
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5H17.5V14H2.5Z M7 14L5 18 M13 14L15 18"/></svg></span>
+          <div><h3>Whiteboard and blackboard</h3><p>One click turns your screen into a blank page for sketching an idea.</p></div>
+        </li>
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6H18V17H2Z M6.5 6L8 3.5H12L13.5 6"/><circle cx="10" cy="11.5" r="3"/></svg></span>
+          <div><h3>Screenshots with your drawings</h3><p>Saved to your Pictures folder and copied to the clipboard, ready to paste.</p></div>
+        </li>
+        <li>
+          <span class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5V12 M10 12L6 8 M10 12L14 8 M3 12.5V17H17V12.5"/></svg></span>
+          <div><h3>Stays out of your way</h3><p>Hides to the tray, remembers your settings and works across every monitor.</p></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="shortcuts">
+    <div class="wrap">
+      <h2>Keep your hands on the keyboard</h2>
+      <p class="section-lede">Every tool has a shortcut, and the main ones work from any app.</p>
+      <div class="keys">
+        <div>
+          <h3>Anywhere on Windows</h3>
+          <p class="scope">These work even when Penlay is in the background.</p>
+          <table>
+            <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>D</kbd></td><td>Start or stop drawing</td></tr>
+            <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>L</kbd></td><td>Laser pointer</td></tr>
+            <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>H</kbd></td><td>Hide or show drawings</td></tr>
+            <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Shift</kbd><span class="plus">+</span><kbd>X</kbd></td><td>Clear all drawings</td></tr>
+          </table>
+        </div>
+        <div>
+          <h3>While drawing</h3>
+          <p class="scope">Single keys switch tools instantly.</p>
+          <table>
+            <tr><td><kbd>P</kbd> <kbd>H</kbd> <kbd>L</kbd> <kbd>T</kbd></td><td>Pen, highlighter, laser, text</td></tr>
+            <tr><td><kbd>N</kbd> <kbd>A</kbd> <kbd>R</kbd> <kbd>O</kbd></td><td>Line, arrow, rectangle, ellipse</td></tr>
+            <tr><td><kbd>E</kbd></td><td>Eraser</td></tr>
+            <tr><td><kbd>1</kbd> to <kbd>8</kbd></td><td>Colours</td></tr>
+            <tr><td><kbd>W</kbd> <kbd>B</kbd></td><td>Whiteboard, blackboard</td></tr>
+            <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>Z</kbd> &nbsp;<kbd>Ctrl</kbd><span class="plus">+</span><kbd>Y</kbd></td><td>Undo, redo</td></tr>
+            <tr><td><kbd>Ctrl</kbd><span class="plus">+</span><kbd>S</kbd></td><td>Screenshot</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Back to your mouse</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Up and running in a minute</h2>
+      <p class="section-lede">No installer, no account, no settings to configure.</p>
+      <ol class="steps">
+        <li><h3>Download Penlay.zip</h3><p>About 50 KB, from the <a href="https://github.com/suvashishfx/penlay/releases/latest">latest release</a>.</p></li>
+        <li><h3>Unzip and open Penlay.exe</h3><p>Keep it anywhere you like: Desktop, Documents or a USB drive.</p></li>
+        <li><h3>Press Ctrl + Shift + D</h3><p>Start drawing. Press Esc when you want your mouse back.</p></li>
+      </ol>
+      <div class="warning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3L2.5 20H21.5Z M12 10V14 M12 17V17.2"/></svg>
+        <p>Windows may show <strong>"Windows protected your PC"</strong> the first time, because Penlay isn't code-signed yet. Click <strong>More info</strong>, then <strong>Run anyway</strong>. You only need to do this once.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div class="faq">
+        <details>
+          <summary>Is Penlay really free?</summary>
+          <p>Yes. It's free for personal and commercial use, with no ads, trials or accounts.</p>
+        </details>
+        <details>
+          <summary>Does it collect any data?</summary>
+          <p>No. Penlay never connects to the internet. Screenshots stay on your PC in Pictures\Penlay, and settings are stored in %AppData%\Penlay.</p>
+        </details>
+        <details>
+          <summary>Why does Windows warn me before it opens?</summary>
+          <p>Windows shows that message for new apps that aren't code-signed. Click More info, then Run anyway. After the first time it opens normally.</p>
+        </details>
+        <details>
+          <summary>What do I need to run it?</summary>
+          <p>Windows 10 or 11. Penlay uses .NET Framework 4.x, which is already part of Windows 10 and 11. On older versions, install <a href="https://dotnet.microsoft.com/download/dotnet-framework/net48">.NET Framework 4.8</a> first.</p>
+        </details>
+        <details>
+          <summary>How do I close it completely?</summary>
+          <p>The toolbar button hides Penlay to the system tray. To quit, right-click the Penlay icon in the tray and choose Exit Penlay.</p>
+        </details>
+        <details>
+          <summary>Does it work on Mac or Linux?</summary>
+          <p>Not at the moment. Penlay is made for Windows.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>Start marking up your screen</h2>
+      <div class="actions">
+        <a class="btn btn-primary" href="https://github.com/suvashishfx/penlay/releases/latest/download/Penlay.zip">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3V13 M5.5 8.5L10 13L14.5 8.5 M4 17H16"/></svg>
+          Download for Windows
+        </a>
+        <a class="btn btn-quiet" href="https://github.com/suvashishfx/penlay/issues">Report a bug or suggest a feature</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Penlay is made by Suvashish Halder.</span>
+    <nav aria-label="Footer">
+      <a href="https://suvashishfx.com">suvashishfx.com</a>
+      <a href="https://github.com/suvashishfx/penlay">GitHub</a>
+      <a href="https://github.com/suvashishfx/penlay/blob/main/LICENSE">License</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var cv = document.getElementById("ink");
+  var ctx = cv.getContext("2d");
+  var bar = document.getElementById("toolbar");
+  var toastEl = document.getElementById("toast");
+  var dpr = 1;
+
+  var tool = "mouse";
+  var lastPenTool = "pen";
+  var color = "#FF3B30";
+  var strokes = [];
+  var history = [];
+  var lasers = [];
+  var live = null;
+  var erasing = false, erasedThisDrag = false;
+  var pending = false;
+  var toastTimer = null;
+  var toastShown = false;
+
+  function resize() {
+    dpr = Math.max(1, window.devicePixelRatio || 1);
+    cv.width = Math.round(window.innerWidth * dpr);
+    cv.height = Math.round(window.innerHeight * dpr);
+    requestDraw();
+  }
+
+  function requestDraw() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function () { pending = false; draw(); });
+  }
+
+  function widthFor(t) {
+    if (t === "highlighter") return 22;
+    if (t === "laser") return 5;
+    return 4;
+  }
+
+  function path(pts, smooth) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    if (pts.length === 1) { ctx.lineTo(pts[0].x + 0.01, pts[0].y); return; }
+    if (!smooth || pts.length < 3) {
+      for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      return;
+    }
+    for (var j = 1; j < pts.length - 1; j++) {
+      var mx = (pts[j].x + pts[j + 1].x) / 2, my = (pts[j].y + pts[j + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[j].x, pts[j].y, mx, my);
+    }
+    var last = pts[pts.length - 1];
+    ctx.lineTo(last.x, last.y);
+  }
+
+  function hexToRgb(h) {
+    var n = parseInt(h.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  function drawStroke(s, alpha) {
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    var c = hexToRgb(s.color);
+    function rgba(a) { return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (a * alpha) + ")"; }
+    if (s.tool === "pen") {
+      ctx.strokeStyle = rgba(1);
+      ctx.lineWidth = s.w;
+      path(s.pts, true); ctx.stroke();
+    } else if (s.tool === "highlighter") {
+      ctx.strokeStyle = s.color === "#15171D" ? "rgba(255,214,10," + 0.45 * alpha + ")" : rgba(0.38);
+      ctx.lineWidth = s.w;
+      path(s.pts, false); ctx.stroke();
+    } else if (s.tool === "laser") {
+      path(s.pts, true);
+      ctx.strokeStyle = rgba(0.22); ctx.lineWidth = s.w * 3.4; ctx.stroke();
+      ctx.strokeStyle = rgba(0.55); ctx.lineWidth = s.w * 1.8; ctx.stroke();
+      var w = [c[0] + (255 - c[0]) * 0.65, c[1] + (255 - c[1]) * 0.65, c[2] + (255 - c[2]) * 0.65];
+      ctx.strokeStyle = "rgba(" + (w[0] | 0) + "," + (w[1] | 0) + "," + (w[2] | 0) + "," + (0.95 * alpha) + ")";
+      ctx.lineWidth = Math.max(1.5, s.w * 0.7); ctx.stroke();
+    }
+  }
+
+  function laserAlpha(s, now) {
+    if (!s.end) return 1;
+    var t = now - s.end;
+    if (t < 700) return 1;
+    return Math.max(0, 1 - (t - 700) / 600);
+  }
+
+  function draw() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(dpr, 0, 0, dpr, -window.scrollX * dpr, -window.scrollY * dpr);
+    for (var i = 0; i < strokes.length; i++) drawStroke(strokes[i], 1);
+    if (live && live.tool !== "laser") drawStroke(live, 1);
+    var now = performance.now();
+    for (var k = lasers.length - 1; k >= 0; k--) {
+      var a = laserAlpha(lasers[k], now);
+      if (a <= 0) { lasers.splice(k, 1); continue; }
+      drawStroke(lasers[k], a);
+    }
+    if (lasers.length) requestDraw();
+  }
+
+  function pagePoint(e) { return { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY }; }
+
+  function segDist(p, a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y;
+    var l2 = dx * dx + dy * dy;
+    var t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0;
+    var x = a.x + t * dx - p.x, y = a.y + t * dy - p.y;
+    return Math.sqrt(x * x + y * y);
+  }
+
+  function eraseAt(p) {
+    var r = 12, removed = false;
+    for (var i = strokes.length - 1; i >= 0; i--) {
+      var s = strokes[i], pts = s.pts, hit = false;
+      for (var j = 0; j < pts.length && !hit; j++) {
+        var b = pts[j + 1] || pts[j];
+        if (segDist(p, pts[j], b) <= r + s.w / 2) hit = true;
+      }
+      if (hit) {
+        if (!erasedThisDrag) { checkpoint(); erasedThisDrag = true; }
+        strokes.splice(i, 1);
+        removed = true;
+      }
+    }
+    if (removed) requestDraw();
+  }
+
+  function checkpoint() {
+    history.push(strokes.slice());
+    if (history.length > 100) history.shift();
+  }
+
+  function undo() {
+    if (!history.length) return;
+    strokes = history.pop();
+    requestDraw();
+  }
+
+  function clearAll() {
+    if (strokes.length) { checkpoint(); strokes = []; }
+    lasers = [];
+    requestDraw();
+  }
+
+  cv.addEventListener("pointerdown", function (e) {
+    if (tool === "mouse" || e.button > 0) return;
+    cv.setPointerCapture(e.pointerId);
+    var p = pagePoint(e);
+    if (tool === "eraser") { erasing = true; erasedThisDrag = false; eraseAt(p); return; }
+    live = { tool: tool, color: color, w: widthFor(tool), pts: [p], end: 0 };
+    if (tool === "laser") lasers.push(live);
+    requestDraw();
+  });
+
+  cv.addEventListener("pointermove", function (e) {
+    if (tool === "mouse") return;
+    var p = pagePoint(e);
+    if (erasing) { eraseAt(p); return; }
+    if (!live) return;
+    var last = live.pts[live.pts.length - 1];
+    var dx = p.x - last.x, dy = p.y - last.y;
+    if (dx * dx + dy * dy >= 2.25) { live.pts.push(p); requestDraw(); }
+  });
+
+  function endStroke() {
+    erasing = false;
+    if (!live) return;
+    var s = live;
+    live = null;
+    if (s.tool === "laser") s.end = performance.now();
+    else { checkpoint(); strokes.push(s); }
+    requestDraw();
+  }
+  cv.addEventListener("pointerup", endStroke);
+  cv.addEventListener("pointercancel", endStroke);
+
+  window.addEventListener("scroll", requestDraw, { passive: true });
+  window.addEventListener("resize", resize);
+
+  function showToast(html, ms) {
+    toastEl.innerHTML = html;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, ms || 3200);
+  }
+
+  function setTool(t) {
+    if (live) endStroke();
+    tool = t;
+    if (t !== "mouse" && t !== "eraser") lastPenTool = t;
+    document.body.classList.toggle("drawing", t !== "mouse");
+    var btns = bar.querySelectorAll("[data-tool]");
+    for (var i = 0; i < btns.length; i++) btns[i].setAttribute("aria-pressed", btns[i].getAttribute("data-tool") === t ? "true" : "false");
+    if (t !== "mouse" && !toastShown) {
+      toastShown = true;
+      showToast("Drawing on this page. Press <kbd>Esc</kbd> or pick the arrow to use the page again.", 4200);
+    }
+  }
+
+  function setColor(c) {
+    color = c;
+    var sw = bar.querySelectorAll("[data-color]");
+    for (var i = 0; i < sw.length; i++) sw[i].setAttribute("aria-pressed", sw[i].getAttribute("data-color") === c ? "true" : "false");
+    if (tool === "mouse" || tool === "eraser") setTool(lastPenTool);
+  }
+
+  bar.addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) return;
+    if (b.hasAttribute("data-tool")) setTool(b.getAttribute("data-tool"));
+    else if (b.hasAttribute("data-color")) setColor(b.getAttribute("data-color"));
+    else {
+      var a = b.getAttribute("data-action");
+      if (a === "undo") undo();
+      else if (a === "clear") clearAll();
+      else if (a === "collapse") {
+        var c = bar.classList.toggle("collapsed");
+        b.setAttribute("aria-label", c ? "Expand toolbar" : "Collapse toolbar");
+        b.querySelector(".tip").textContent = c ? "Expand toolbar" : "Collapse toolbar";
+        if (c) setTool("mouse");
+      }
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target && e.target.tagName) || "";
+    if (/INPUT|TEXTAREA|SELECT/.test(tag) || e.altKey || e.metaKey) return;
+    var k = e.key.toLowerCase();
+    if (e.ctrlKey) {
+      if (k === "z" && tool !== "mouse") { e.preventDefault(); undo(); }
+      return;
+    }
+    if (k === "escape") { setTool("mouse"); return; }
+    if (k === "p") setTool("pen");
+    else if (k === "h") setTool("highlighter");
+    else if (k === "l") setTool("laser");
+    else if (k === "e") setTool("eraser");
+    else if (k === "delete" && tool !== "mouse") clearAll();
+    else if (tool !== "mouse" && k >= "1" && k <= "4") {
+      var sw = bar.querySelectorAll("[data-color]");
+      setColor(sw[parseInt(k, 10) - 1].getAttribute("data-color"));
+    }
+  });
+
+  resize();
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  // Block the right-click menu
+  document.addEventListener("contextmenu", function (e) { e.preventDefault(); }, true);
+
+  // Block shortcuts for View Source, Save Page and Developer Tools
+  document.addEventListener("keydown", function (e) {
+    var k = (e.key || "").toLowerCase();
+    var ctrl = e.ctrlKey || e.metaKey;
+    var blocked =
+      k === "f12" ||
+      (ctrl && (k === "u" || k === "s")) ||
+      (ctrl && e.shiftKey && (k === "i" || k === "j" || k === "c" || k === "k")) ||
+      (e.metaKey && e.altKey && (k === "i" || k === "j" || k === "c" || k === "u"));
+    if (blocked) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  // Stop images from being dragged out of the page
+  document.addEventListener("dragstart", function (e) {
+    if (e.target && e.target.tagName === "IMG") e.preventDefault();
+  }, true);
+})();
+</script>
+</body>
+</html>
